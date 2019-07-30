@@ -1,0 +1,19 @@
+{
+  "name": "dojot-client-node-mqtt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "newclient.js",
+  "dependencies": {
+    "@dojot/dojot-module-logger": "0.0.1-alpha.5",
+    "eslint": "^6.1.0",
+    "mqtt": "^3.0.0",
+    "net": "^1.0.2",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
