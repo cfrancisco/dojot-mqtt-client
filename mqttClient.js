@@ -2,9 +2,11 @@ const mqtt = require('mqtt')
 const uuid = require('uuid/v4');
 var net = require('net');
 
+const RECONNECT_TIME = 20000; // 20 s
 const STATE = {
     NOT_CONNECTED: 'not_connected',
     CONNECTED: 'connected',
+    CONNECTING: 'connecting',
     DC_WAITING_TO_CONNECT: 'disconnected_waiting_to_connect',
     STOPPED: 'stopped',
     DISCONNECTED: 'disconnected',
@@ -12,12 +14,12 @@ const STATE = {
 
 let stats = {
     msgCount :0,
-    clientCount :0,
-    reconnect :0,
+    connectionCount :0,
+    reconnectedCount :0,
     closeCount :0,
+    endCount :0,
     errorCount :0,
-    offlineCount :0,
-    disconnectedCount :0,
+    offlineCount :0
 };
 
 
@@ -25,7 +27,6 @@ let stats = {
 class Client {
 
     constructor(host,port,keepAlive, deviceId = null) { 
-        this.clientId = uuid();
         this.masterHost = host;
         this.masterPort = port;
         this.keepAlive = keepAlive;
@@ -45,22 +46,20 @@ class Client {
     }
 
     start() { 
-        console.info('Starting at ', this.masterHost, this.masterPort);
-        //this.client  = mqtt.Client('mqtt://'+this.masterHost+":"+this.masterPort,;
-        this.client  = mqtt.Client(
-            function () {
-                return net.connect({host: this.masterHost, port: this.masterPort});
-            },{
+        //console.info('Starting at ', this.masterHost, this.masterPort);
+        this.currentState = STATE.CONNECTING;
+        this.clientId = uuid(); // I need a new ID
+        this.client  = mqtt.connect('mqtt://'+this.masterHost+":"+this.masterPort,{
                 reconnectPeriod: 100 * 1000,
                 keepalive: this.keepAlive,
                 clientId: this.clientId,
-             });
-        this.client.on('connect', this.on_connect);
-        this.client.on('disconnect', this.on_disconnect);
+             }); // try connect, if isn't possible, try to reconnect. 
+        this.client.on('connect', (connack) => { return this.on_connect(this,connack);} );
+        this.client.on('offline', () => { return this.on_offline(this);} );
         this.client.on('message', this.on_message); 
         this.client.on('reconnect', this.on_reconnect);
-        this.client.on('offline', this.on_offline);
-        this.client.on('end', this.on_end);
+
+        this.client.on('end', () => { return this.on_end(this);} );
         this.client.on('error', this.on_error);
         this.client.on('close', this.on_close);
     }
@@ -71,70 +70,63 @@ class Client {
     }
 
     disconnect() {
-    if (this.client) {
-        return new Promise(resolve => {
-        this.client.end(false, resolve);
-        this.client = null;
-        });
-    }
-    //i need recreate my mqtt client;
+        if (this.client) {
+        this.client.end(false);
+        }
     }
 
     
-    on_connect()
+    on_connect(context, connack)
     {
-        console.log("on_connect");
-        stats.clientCount++;
-        //console.log("New client connected, total connected: ", clientCount)
+        console.log("on_connect. Connack: ", connack.returnCode);
+        stats.connectionCount++;
+        context.currentState = STATE.CONNECTED;
+        //console.log("New client connected, total connected: ", connectionCount)
     }
      
-    on_disconnect() 
-    {
-        //Emitted after receiving disconnect packet from broker. MQTT 5.0 feature.
-        console.log("on_disconnect");
-        stats.disconnectedCount++;
-    }
-    
     on_message(topic, message)
     {
         stats.msgCount++;
     }
     
-    
+    //Emitted when a reconnect starts.
     on_reconnect()
     {
         console.log("on_reconnect");
         stats.reconnectedCount++;
-        stats.clientCount++;
     }
     
     // As @mcollina (from mqtt.js) said: there is the 'close' event, which is emitted when the user requests a disconnection via end(). The 'offline' event is instead used when the connection to the server is closed (for whatever reason) and the client reconnects.
-    on_offline()
+    on_offline(context)
     {
         console.log("on_offline");
         stats.offlineCount++;
-          // so here we ask to disconnected (end and destroy the connection;
-                // wait 20 seconds;
-                // create again the mqqt client and try to reconnect;
+        
+        // so here we ask to disconnected (end and destroy the connection;
+        context.disconnect();
+        this.currentState = STATE.DC_WAITING_TO_CONNECT;
+
+        // wait 20 seconds;
+        // create again the mqqt client and try to reconnect;
+        setTimeout(() => context.start(), RECONNECT_TIME);
     }
     
     
-    on_end()
+    on_end(context)
     {
         console.log("on_end");
-        stats.closeCount++;
-        stats.clientCount--;
+        stats.endCount++;
+        context.client = null;
+        console.log("Cleared the MQTT Client? ",context.client);
     }
     
     on_close()
     {
         console.log("close");
         stats.closeCount++;
-        stats.clientCount--;
     }
     
-    
-    on_error ()
+    on_error (err)
     {
         stats.errorCount++;
         console.log(err);
@@ -145,7 +137,7 @@ class Client {
 
 
 setInterval(function () {
-    console.log('MQTT Connected:' + stats.clientCount + ', ReConnect:' + stats.reconnectedCount +  ', Disconnected:' + stats.disconnectedCount + ', Close:' + stats.closeCount + ', ERROR:' + stats.errorCount + ',Received:' + stats.msgCount + '.');
+    console.log('Connections made:' + stats.connectionCount + ', ReConnect:' + stats.reconnectedCount + ', Close:' + stats.closeCount + ', ERROR:' + stats.errorCount + ',Received:' + stats.msgCount + ', End: '+stats.endCount+'.');
 }, 2000);
 
 

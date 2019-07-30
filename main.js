@@ -7,9 +7,9 @@ const logLevel = config.log_level;
 logger.setLevel(logLevel);
 
 
-// 20 ms to create each device (rps: 50 user per second)
-const nClients = 30000;
-const intervalTime = 20; 
+// RPS =  1/intervalTime:  50 user per second
+const nClients = 3;
+const intervalTime = 20; // 20 ms to create each device
 
 logger.info("Starting client simulator.");
 
@@ -41,26 +41,30 @@ for (var i = 1; i <= nClients; i++) {
 // ConnectionChecker
 ConnectionChecker = () => 
 {
-
     setInterval(function () {
-            let connectedCounter = 0, notConnectedCounter = 0;
-            Clients.forEach(el => {
+        let stateCouter = {
+            'not_connected':0,
+            'connected':0,
+            'connecting':0,
+            'disconnected_waiting_to_connect':0 };
+        let connectedCounter = 0, notConnectedCounter = 0, notInstatiated = 0;
+        Clients.forEach(el => {
+            stateCouter[el.currentState]++;
+            if (el.client === null) {
+                notInstatiated++;
+                return;}
             const clnt = el.client;
-            console.log(clnt);
             if (clnt.connected)
-               connectedCounter++;
+            connectedCounter++;
             else
                 notConnectedCounter++;        
         });
         logger.info("Clients connected: "+connectedCounter);
         logger.info("Clients not connected: "+notConnectedCounter);
+        logger.info("Clients not instatiated: "+notInstatiated);
+        console.log(stateCouter);
     }, 4000);
 }
-
-
-setInterval(function () {
-    console.log('MQTT Connected:' + stats.clientCount + ', ReConnect:' + stats.reconnectedCount +  ', Disconnected:' + stats.disconnectedCount + ', Close:' + stats.closeCount + ', ERROR:' + stats.errorCount + ',Received:' + stats.msgCount + '.');
-}, 2000);
 
 
 ConnectionChecker();
