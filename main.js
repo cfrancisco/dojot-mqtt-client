@@ -1,6 +1,5 @@
 const config = require('./config');
 const dojotLogger = require("@dojot/dojot-module-logger");
-
 const MQTTClient = require('./mqttClient');
 
 const logger = dojotLogger.logger;
@@ -21,6 +20,7 @@ logger.info("Starting client simulator.");
 const cache = new Map();
 
  
+
 let Clients = [];
 var deviceId = null;
 
@@ -28,6 +28,7 @@ for (var i = 1; i <= nClients; i++) {
 
     setTimeout(function () {
         var client = new MQTTClient.Client(config.mqtt_host,config.mqtt_port, 600, deviceId);
+        //client.setStats(stats);
         client.setLogger(logger);
         client.start();
         Clients.push(client);
@@ -56,6 +57,10 @@ ConnectionChecker = () =>
     }, 4000);
 }
 
+
+setInterval(function () {
+    console.log('MQTT Connected:' + stats.clientCount + ', ReConnect:' + stats.reconnectedCount +  ', Disconnected:' + stats.disconnectedCount + ', Close:' + stats.closeCount + ', ERROR:' + stats.errorCount + ',Received:' + stats.msgCount + '.');
+}, 2000);
 
 
 ConnectionChecker();
