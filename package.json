@@ -4,6 +4,8 @@
   "description": "",
   "main": "newclient.js",
   "dependencies": {
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5",
     "@dojot/dojot-module-logger": "0.0.1-alpha.5",
     "eslint": "^6.1.0",
     "eslint-config-airbnb": "^17.1.1",
