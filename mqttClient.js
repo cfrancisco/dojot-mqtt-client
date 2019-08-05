@@ -7,8 +7,8 @@ const STATE = require("./util");
 const logger = dojotLogger.logger;
 const logLevel = config.log_level;
 logger.setLevel(logLevel);
-
-const RECONNECT_TIME = 20000; // 20 s
+const RECONNECT_TIME = config.reconnection_time;
+const PUBLISH_INTERVAL = config.publish_time;
 
 let publishers = {};
 
@@ -88,7 +88,7 @@ class Client {
       });
       logger.debug("Trying to publish to topic:" + topic);
       this.client.publish(topic, message, null, this.on_publish);
-    }, 10000); // 10 seconds to send each msg: 6/min
+    }, PUBLISH_INTERVAL);
   }
 
   disconnect() {
@@ -164,11 +164,11 @@ class Client {
 
 setInterval(function() {
   logger.info(
-    "Total Connections realized:" +
+    "Total connections built:" +
       stats.connectionCount +
-      ", Reconnectings:" +
+      ", Reconnections:" +
       stats.reconnectedCount +
-      ", Close:" +
+      ", Connections closed:" +
       stats.closeCount +
       ", ERROR:" +
       stats.errorCount +
@@ -176,7 +176,7 @@ setInterval(function() {
       stats.msgCount +
       ", Offline: " +
       stats.offlineCount +
-      ", End: " +
+      ", Connections ended: " +
       stats.endCount +
       "."
   );
