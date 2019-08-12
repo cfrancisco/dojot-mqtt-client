@@ -8,7 +8,7 @@ const logLevel = config.log_level;
 logger.setLevel(logLevel);
 
 // RPS =  1/INTERVAL_TIME:  50 user per second
-const N_CLIENTS = 4000;
+const N_CLIENTS = 10000;
 const INTERVAL_TIME = 20; // 20 ms to create each device
 var DEVICE_ID = "a88ea";
 let Clients = [];
